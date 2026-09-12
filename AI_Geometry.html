@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Geometry Scanner</title>
+
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    background: #f2f2f2;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 30px;
+}
+
+#camera {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 15px;
+    margin: 15px auto;
+    display: block;
+}
+
+#result {
+    background: white;
+    padding: 20px;
+    margin: 15px auto;
+    max-width: 450px;
+    border-radius: 15px;
+    font-size: 22px;
+}
+
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🤖 AI GEOMETRY SCANNER 📐</h1>
+
+<button onclick="init()">📷 START CAMERA</button>
+
+<video id="camera" autoplay playsinline></video>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<div id="result">
+    <b>Show a shape to the camera!</b>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<script>
+
+const URL = "./";
+
+let model;
+let video;
+let canvas;
+let ctx;
+
+async function init() {
+
+    // Load AI model
+    model = await tmImage.load(
+        URL + "model.json",
+        URL + "metadata.json"
+    );
+
+    video = document.getElementById("camera");
+    canvas = document.getElementById("canvas");
+    ctx = canvas.getContext("2d");
+
+    // Use BACK CAMERA on mobile
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+            facingMode: { ideal: "environment" }
+        },
+        audio: false
+    });
+
+    video.srcObject = stream;
+
+    video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        loop();
+    };
+}
+
+async function loop() {
+
+    ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    const prediction = await model.predict(canvas);
+
+    let best = prediction[0];
+
+    for (let p of prediction) {
+        if (p.probability > best.probability) {
+            best = p;
+        }
+    }
+
+    let shape = best.className;
+    let confidence = (best.probability * 100).toFixed(1);
+
+    let sides = {
+        "Triangle": 3,
+        "Square": 4,
+        "Rectangle": 4,
+        "Circle": 0
+    };
+
+    document.getElementById("result").innerHTML =
+        "<b>Shape:</b> " + shape +
+        "<br><b>Confidence:</b> " + confidence + "%" +
+        "<br><b>Sides:</b> " + (sides[shape] ?? "—");
+
+    requestAnimationFrame(loop);
+}
+
+</script>
+
+</body>
+</html>
