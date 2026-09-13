@@ -1,59 +1,215 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Geometry Scanner</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+
 <style>
+* {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial;
+    margin: 0;
+    padding: 22px 14px;
     text-align: center;
-    background: #f2f2f2;
-    padding: 20px;
+    font-family: 'Kalam', cursive;
+    background: #eeeaff;
+    color: #40308f;
 }
 
 h1 {
-    font-size: 30px;
+    font-size: 34px;
+    margin: 5px 0 0;
 }
 
-#camera {
+.subtitle {
+    font-size: 20px;
+    color: #7665c9;
+    margin-bottom: 18px;
+}
+
+.camera-box {
     width: 100%;
-    max-width: 500px;
-    border-radius: 15px;
-    margin: 15px auto;
-    display: block;
+    max-width: 520px;
+    margin: auto;
+    padding: 8px;
+    border: 2px solid #c9bdff;
+    border-radius: 25px;
+    background: #f5f1ff;
 }
 
-#result {
-    background: white;
-    padding: 20px;
-    margin: 15px auto;
-    max-width: 450px;
-    border-radius: 15px;
-    font-size: 22px;
+video, canvas {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 20px;
+    background: #252329;
+}
+
+#photo {
+    display: none;
+}
+
+.camera-text {
+    font-size: 20px;
+    margin-top: 8px;
+    color: #8a78d6;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 18px auto;
+    max-width: 550px;
 }
 
 button {
-    padding: 12px 25px;
-    font-size: 18px;
-    border-radius: 10px;
+    font-family: 'Kalam', cursive;
+    font-size: 20px;
+    padding: 13px 20px;
+    border-radius: 30px;
+    border: 2px solid #c5b8ff;
+    background: #f7f3ff;
+    color: #5644b8;
     cursor: pointer;
+}
+
+#scanBtn {
+    background: linear-gradient(135deg,#7456e8,#8c6cf2);
+    color: white;
+    border: none;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.results {
+    max-width: 520px;
+    margin: 15px auto;
+    padding: 18px;
+    border: 2px solid #c9bdff;
+    border-radius: 25px;
+    background: #f8f5ff;
+    text-align: left;
+}
+
+.results h2 {
+    margin: 0 0 12px;
+    font-size: 27px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #eeeaff;
+    border-radius: 25px;
+    padding: 10px 15px;
+    margin: 8px 0;
+    font-size: 19px;
+}
+
+.label {
+    flex: 1;
+}
+
+.value {
+    border-left: 2px solid #cfc5ff;
+    padding-left: 15px;
+    min-width: 100px;
+    text-align: center;
+}
+
+@media (max-width: 500px) {
+    h1 {
+        font-size: 30px;
+    }
+
+    .row {
+        font-size: 17px;
+    }
+
+    button {
+        font-size: 18px;
+    }
 }
 </style>
 </head>
 
 <body>
 
-<h1>🤖 AI GEOMETRY SCANNER 📐</h1>
+<h1>📐 AI Geometry Scanner ✨</h1>
 
-<button onclick="init()">📷 START CAMERA</button>
-
-<video id="camera" autoplay playsinline></video>
-
-<canvas id="canvas" style="display:none;"></canvas>
-
-<div id="result">
-    <b>Show a shape to the camera!</b>
+<div class="subtitle">
+    Point · Scan · Discover
 </div>
+
+<div class="camera-box">
+
+    <video id="video" autoplay playsinline></video>
+
+    <canvas id="photo"></canvas>
+
+    <div class="camera-text">
+        ✨ Point your camera at a shape...
+    </div>
+
+</div>
+
+<div class="buttons">
+
+    <button id="scanBtn" onclick="takePhoto()">
+        📷 Scan Shape
+    </button>
+
+    <button onclick="stopCamera()">
+        ⏹️ End Camera
+    </button>
+
+    <button onclick="startCamera()">
+        🔄 Scan Again
+    </button>
+
+</div>
+
+<div class="results">
+
+    <h2>📐 Results</h2>
+
+    <div class="row">
+        <span class="label">🔺 Shape:</span>
+        <span class="value" id="shape">—</span>
+    </div>
+
+    <div class="row">
+        <span class="label">🎯 Confidence:</span>
+        <span class="value" id="confidence">—</span>
+    </div>
+
+    <div class="row">
+        <span class="label">⬡ No. of sides:</span>
+        <span class="value" id="sides">—</span>
+    </div>
+
+    <div class="row">
+        <span class="label">🧮 Area formula:</span>
+        <span class="value" id="formula">—</span>
+    </div>
+
+    <div class="row">
+        <span class="label">↔️ Unit:</span>
+        <span class="value" id="unit">—</span>
+    </div>
+
+</div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
@@ -63,41 +219,60 @@ button {
 const URL = "./";
 
 let model;
-let video;
-let canvas;
-let ctx;
+let stream;
 
-async function init() {
+const video = document.getElementById("video");
+const canvas = document.getElementById("photo");
 
-    // Load AI model
-    model = await tmImage.load(
-        URL + "model.json",
-        URL + "metadata.json"
-    );
 
-    video = document.getElementById("camera");
-    canvas = document.getElementById("canvas");
-    ctx = canvas.getContext("2d");
+async function startCamera() {
 
-    // Use BACK CAMERA on mobile
-    const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-            facingMode: { ideal: "environment" }
-        },
-        audio: false
-    });
+    try {
 
-    video.srcObject = stream;
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: {
+                    ideal: "environment"
+                }
+            },
+            audio: false
+        });
 
-    video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        video.srcObject = stream;
 
-        loop();
-    };
+    } catch (error) {
+
+        alert("Camera permission is needed 📷");
+
+    }
 }
 
-async function loop() {
+
+function stopCamera() {
+
+    if (stream) {
+
+        stream.getTracks().forEach(track => track.stop());
+
+        stream = null;
+        video.srcObject = null;
+    }
+}
+
+
+async function takePhoto() {
+
+    if (!stream) {
+
+        await startCamera();
+
+        return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
 
     ctx.drawImage(
         video,
@@ -107,33 +282,95 @@ async function loop() {
         canvas.height
     );
 
-    const prediction = await model.predict(canvas);
+    canvas.style.display = "block";
+    video.style.display = "none";
+
+    await scanPhoto();
+
+}
+
+
+async function scanPhoto() {
+
+    if (!model) {
+
+        model = await tmImage.load(
+            URL + "model.json",
+            URL + "metadata.json"
+        );
+
+    }
+
+    const prediction =
+        await model.predict(canvas);
 
     let best = prediction[0];
 
     for (let p of prediction) {
+
         if (p.probability > best.probability) {
             best = p;
         }
+
     }
 
-    let shape = best.className;
-    let confidence = (best.probability * 100).toFixed(1);
+    const shape = best.className;
 
-    let sides = {
-        "Triangle": 3,
-        "Square": 4,
-        "Rectangle": 4,
-        "Circle": 0
+    const confidence =
+        (best.probability * 100).toFixed(1) + "%";
+
+
+    const data = {
+
+        Triangle: {
+            sides: "3",
+            formula: "½ × b × h",
+            unit: "square units"
+        },
+
+        Square: {
+            sides: "4",
+            formula: "a²",
+            unit: "square units"
+        },
+
+        Rectangle: {
+            sides: "4",
+            formula: "l × w",
+            unit: "square units"
+        },
+
+        Circle: {
+            sides: "0",
+            formula: "πr²",
+            unit: "square units"
+        }
+
     };
 
-    document.getElementById("result").innerHTML =
-        "<b>Shape:</b> " + shape +
-        "<br><b>Confidence:</b> " + confidence + "%" +
-        "<br><b>Sides:</b> " + (sides[shape] ?? "—");
 
-    requestAnimationFrame(loop);
+    const info = data[shape];
+
+
+    document.getElementById("shape").textContent =
+        shape;
+
+    document.getElementById("confidence").textContent =
+        confidence;
+
+    document.getElementById("sides").textContent =
+        info ? info.sides : "—";
+
+    document.getElementById("formula").textContent =
+        info ? info.formula : "—";
+
+    document.getElementById("unit").textContent =
+        info ? info.unit : "—";
+
 }
+
+
+startCamera();
 
 </script>
 
