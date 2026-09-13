@@ -229,16 +229,27 @@ async function startCamera() {
 
     try {
 
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({
             video: {
-                facingMode: {
-                    ideal: "environment"
-                }
+                facingMode: { ideal: "environment" }
             },
             audio: false
         });
 
         video.srcObject = stream;
+
+        video.style.display = "block";
+        canvas.style.display = "none";
+
+        document.getElementById("shape").textContent = "—";
+        document.getElementById("confidence").textContent = "—";
+        document.getElementById("sides").textContent = "—";
+        document.getElementById("formula").textContent = "—";
+        document.getElementById("unit").textContent = "—";
 
     } catch (error) {
 
@@ -257,15 +268,21 @@ function stopCamera() {
         stream = null;
         video.srcObject = null;
     }
+
+    video.style.display = "none";
+    canvas.style.display = "none";
 }
 
 
 async function takePhoto() {
 
     if (!stream) {
-
         await startCamera();
+        return;
+    }
 
+    if (video.videoWidth === 0) {
+        alert("Camera is still starting... try again 📷");
         return;
     }
 
@@ -282,95 +299,99 @@ async function takePhoto() {
         canvas.height
     );
 
-    canvas.style.display = "block";
     video.style.display = "none";
+    canvas.style.display = "block";
 
     await scanPhoto();
-
 }
 
 
 async function scanPhoto() {
 
-    if (!model) {
+    try {
 
-        model = await tmImage.load(
-            URL + "model.json",
-            URL + "metadata.json"
-        );
+        if (!model) {
 
-    }
+            model = await tmImage.load(
+                URL + "model.json",
+                URL + "metadata.json"
+            );
 
-    const prediction =
-        await model.predict(canvas);
-
-    let best = prediction[0];
-
-    for (let p of prediction) {
-
-        if (p.probability > best.probability) {
-            best = p;
         }
 
-    }
+        const prediction = await model.predict(canvas);
 
-    const shape = best.className;
+        let best = prediction[0];
 
-    const confidence =
-        (best.probability * 100).toFixed(1) + "%";
+        for (let p of prediction) {
 
+            if (p.probability > best.probability) {
+                best = p;
+            }
 
-    const data = {
-
-        Triangle: {
-            sides: "3",
-            formula: "½ × b × h",
-            unit: "square units"
-        },
-
-        Square: {
-            sides: "4",
-            formula: "a²",
-            unit: "square units"
-        },
-
-        Rectangle: {
-            sides: "4",
-            formula: "l × w",
-            unit: "square units"
-        },
-
-        Circle: {
-            sides: "0",
-            formula: "πr²",
-            unit: "square units"
         }
 
-    };
+        const shape = best.className;
+
+        const confidence =
+            (best.probability * 100).toFixed(1) + "%";
 
 
-    const info = data[shape];
+        const data = {
+
+            Triangle: {
+                sides: "3",
+                formula: "½ × b × h",
+                unit: "square units"
+            },
+
+            Square: {
+                sides: "4",
+                formula: "a²",
+                unit: "square units"
+            },
+
+            Rectangle: {
+                sides: "4",
+                formula: "l × w",
+                unit: "square units"
+            },
+
+            Circle: {
+                sides: "0",
+                formula: "πr²",
+                unit: "square units"
+            }
+
+        };
 
 
-    document.getElementById("shape").textContent =
-        shape;
+        const info = data[shape];
 
-    document.getElementById("confidence").textContent =
-        confidence;
 
-    document.getElementById("sides").textContent =
-        info ? info.sides : "—";
+        document.getElementById("shape").textContent = shape;
 
-    document.getElementById("formula").textContent =
-        info ? info.formula : "—";
+        document.getElementById("confidence").textContent =
+            confidence;
 
-    document.getElementById("unit").textContent =
-        info ? info.unit : "—";
+        document.getElementById("sides").textContent =
+            info ? info.sides : "—";
 
+        document.getElementById("formula").textContent =
+            info ? info.formula : "—";
+
+        document.getElementById("unit").textContent =
+            info ? info.unit : "—";
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert("Unable to scan the shape. Please try again.");
+
+    }
 }
-
-
-startCamera();
 
 </script>
 
